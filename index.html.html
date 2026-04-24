@@ -1,0 +1,561 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dashboard Horário de Saída — PORTOEX</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+  :root {
+    --bg: #f5f4f0;
+    --surface: #ffffff;
+    --surface2: #f0ede8;
+    --border: rgba(0,0,0,0.10);
+    --text: #1a1a18;
+    --text2: #6b6a65;
+    --text3: #9c9b96;
+    --blue: #185FA5;
+    --blue-light: #E6F1FB;
+    --red: #A32D2D;
+    --red-light: #FCEBEB;
+    --green: #0F6E56;
+    --green-light: #E1F5EE;
+    --amber: #BA7517;
+    --amber-light: #FAEEDA;
+    --radius: 10px;
+    --shadow: 0 1px 3px rgba(0,0,0,0.08);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: var(--text); font-size: 14px; }
+
+  header {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 18px 28px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  .logo { width: 36px; height: 36px; background: #1a3a6b; border-radius: 8px; display:flex; align-items:center; justify-content:center; }
+  .logo svg { width:20px; height:20px; fill:#fff; }
+  header h1 { font-size: 16px; font-weight: 600; color: var(--text); }
+  header span { font-size: 12px; color: var(--text2); margin-left: 4px; }
+
+  .container { max-width: 1200px; margin: 0 auto; padding: 24px 20px; }
+
+  /* Month tabs */
+  .month-tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 20px; }
+  .tab {
+    padding: 6px 16px;
+    border-radius: 20px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--text2);
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 500;
+    transition: all .15s;
+  }
+  .tab:hover { background: var(--surface2); color: var(--text); }
+  .tab.active { background: #1a3a6b; color: #fff; border-color: #1a3a6b; }
+
+  /* Metric cards */
+  .metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin-bottom: 24px; }
+  .metric-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px 16px;
+    box-shadow: var(--shadow);
+  }
+  .metric-card .label { font-size: 11px; color: var(--text2); text-transform: uppercase; letter-spacing: .05em; margin-bottom: 6px; }
+  .metric-card .value { font-size: 24px; font-weight: 700; line-height: 1; }
+  .metric-card .sub { font-size: 11px; color: var(--text3); margin-top: 4px; }
+  .red-val { color: var(--red); }
+  .green-val { color: var(--green); }
+  .blue-val { color: var(--blue); }
+  .amber-val { color: var(--amber); }
+
+  /* Chart section */
+  .chart-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px;
+    box-shadow: var(--shadow);
+  }
+  .chart-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 10px; }
+  .chart-title { font-size: 14px; font-weight: 600; color: var(--text); }
+  .legend { display: flex; gap: 14px; flex-wrap: wrap; }
+  .legend-item { display: flex; align-items: center; gap: 5px; font-size: 11px; color: var(--text2); }
+  .legend-dot { width: 10px; height: 10px; border-radius: 2px; flex-shrink: 0; }
+  .chart-wrap { position: relative; width: 100%; }
+
+  /* Summary table */
+  .section-title { font-size: 13px; font-weight: 600; color: var(--text); margin: 24px 0 12px; }
+  .table-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+    box-shadow: var(--shadow);
+  }
+  table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  th {
+    background: var(--surface2);
+    padding: 10px 14px;
+    text-align: left;
+    font-weight: 600;
+    color: var(--text2);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+    border-bottom: 1px solid var(--border);
+    white-space: nowrap;
+  }
+  td { padding: 9px 14px; border-bottom: 1px solid rgba(0,0,0,0.05); color: var(--text); }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: var(--surface2); }
+  .badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 11px;
+    font-weight: 600;
+  }
+  .badge-red { background: var(--red-light); color: var(--red); }
+  .badge-green { background: var(--green-light); color: var(--green); }
+  .badge-amber { background: var(--amber-light); color: var(--amber); }
+
+  footer { text-align: center; padding: 24px; font-size: 11px; color: var(--text3); }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <svg viewBox="0 0 20 20"><path d="M2 4h16v2H2V4zm0 5h10v2H2V9zm0 5h13v2H2v-2z"/></svg>
+  </div>
+  <div>
+    <h1>Dashboard Horário de Saída <span>— PORTOEX Operações</span></h1>
+  </div>
+</header>
+
+<div class="container">
+  <div class="month-tabs" id="monthTabs"></div>
+  <div class="metrics" id="metrics"></div>
+
+  <div class="chart-card">
+    <div class="chart-header">
+      <div class="chart-title" id="chartTitle">Horário real de saída por dia</div>
+      <div class="legend">
+        <div class="legend-item"><div class="legend-dot" style="background:#A32D2D"></div>Acima do target (atraso)</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#0F6E56"></div>Abaixo do target (adiantado)</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#EF9F27;border:1.5px dashed #BA7517;border-radius:0"></div>Target 23:08</div>
+      </div>
+    </div>
+    <div class="chart-wrap" id="chartWrap">
+      <canvas id="mainChart" role="img" aria-label="Gráfico de horário de saída comparado ao target 23:08"></canvas>
+    </div>
+  </div>
+
+  <div class="section-title">Resumo por mês</div>
+  <div class="table-card">
+    <table id="summaryTable">
+      <thead>
+        <tr>
+          <th>Mês</th>
+          <th>Dias</th>
+          <th>Atrasos</th>
+          <th>Adiantados</th>
+          <th>Total horas a +</th>
+          <th>Total horas a −</th>
+          <th>Saldo</th>
+          <th>Média diária</th>
+        </tr>
+      </thead>
+      <tbody id="summaryBody"></tbody>
+    </table>
+  </div>
+</div>
+
+<footer>PORTOEX — Dados extraídos da planilha operacional · Target fixo: 23:08</footer>
+
+<script>
+// ===================== DADOS =====================
+const TARGET = 23*60+8; // 1388 minutos
+
+const RAW = [
+  // ABRIL 2025
+  {d:'01/04/2025',s:'20:27'},{d:'02/04/2025',s:'20:41'},{d:'03/04/2025',s:'20:23'},
+  {d:'04/04/2025',s:'22:43'},{d:'07/04/2025',s:'20:47'},{d:'08/04/2025',s:'19:57'},
+  {d:'09/04/2025',s:'19:10'},{d:'10/04/2025',s:'20:07'},{d:'11/04/2025',s:'21:37'},
+  {d:'14/04/2025',s:'21:50'},{d:'15/04/2025',s:'19:34'},{d:'16/04/2025',s:'22:29'},
+  {d:'17/04/2025',s:'22:03'},{d:'21/04/2025',s:'20:41'},{d:'22/04/2025',s:'19:01'},
+  {d:'23/04/2025',s:'19:54'},{d:'24/04/2025',s:'21:04'},{d:'28/04/2025',s:'20:54'},
+  {d:'29/04/2025',s:'19:29'},{d:'30/04/2025',s:'20:40'},
+  // MAIO 2025
+  {d:'02/05/2025',s:'21:47'},{d:'05/05/2025',s:'00:18'},{d:'06/05/2025',s:'02:22'},
+  {d:'07/05/2025',s:'23:11'},{d:'08/05/2025',s:'23:48'},{d:'09/05/2025',s:'01:22'},
+  {d:'12/05/2025',s:'01:06'},{d:'13/05/2025',s:'00:55'},{d:'14/05/2025',s:'00:38'},
+  {d:'15/05/2025',s:'01:05'},{d:'16/05/2025',s:'01:52'},{d:'19/05/2025',s:'01:06'},
+  {d:'20/05/2025',s:'00:46'},{d:'21/05/2025',s:'00:48'},{d:'22/05/2025',s:'00:42'},
+  {d:'23/05/2025',s:'01:06'},{d:'24/05/2025',s:'00:38'},{d:'26/05/2025',s:'23:52'},
+  {d:'27/05/2025',s:'00:38'},{d:'29/05/2025',s:'22:39'},{d:'30/05/2025',s:'03:14'},
+  // JUNHO 2025
+  {d:'02/06/2025',s:'00:11'},{d:'03/06/2025',s:'00:27'},{d:'04/06/2025',s:'22:03'},
+  {d:'05/06/2025',s:'00:05'},{d:'06/06/2025',s:'01:00'},{d:'09/06/2025',s:'23:54'},
+  {d:'10/06/2025',s:'00:07'},{d:'11/06/2025',s:'22:59'},{d:'12/06/2025',s:'00:20'},
+  {d:'13/06/2025',s:'23:52'},{d:'16/06/2025',s:'23:12'},{d:'17/06/2025',s:'00:04'},
+  {d:'18/06/2025',s:'02:36'},{d:'20/06/2025',s:'00:22'},{d:'23/06/2025',s:'00:12'},
+  {d:'25/06/2025',s:'22:42'},{d:'26/06/2025',s:'23:34'},{d:'27/06/2025',s:'00:28'},
+  {d:'30/06/2025',s:'01:28'},
+  // JULHO 2025
+  {d:'01/07/2025',s:'00:38'},{d:'02/07/2025',s:'23:47'},{d:'03/07/2025',s:'02:41'},
+  {d:'04/07/2025',s:'23:52'},{d:'07/07/2025',s:'01:26'},{d:'08/07/2025',s:'01:02'},
+  {d:'09/07/2025',s:'00:42'},{d:'10/07/2025',s:'23:33'},{d:'11/07/2025',s:'02:57'},
+  {d:'14/07/2025',s:'01:55'},{d:'15/07/2025',s:'01:34'},{d:'16/07/2025',s:'01:13'},
+  {d:'17/07/2025',s:'01:27'},{d:'18/07/2025',s:'01:33'},{d:'21/07/2025',s:'01:29'},
+  {d:'22/07/2025',s:'01:26'},{d:'23/07/2025',s:'05:27'},{d:'24/07/2025',s:'04:19'},
+  {d:'25/07/2025',s:'23:18'},{d:'28/07/2025',s:'23:38'},{d:'29/07/2025',s:'02:44'},
+  {d:'30/07/2025',s:'23:11'},{d:'31/07/2025',s:'01:43'},
+  // AGOSTO 2025
+  {d:'01/08/2025',s:'22:28'},{d:'04/08/2025',s:'22:39'},{d:'05/08/2025',s:'00:17'},
+  {d:'06/08/2025',s:'23:38'},{d:'07/08/2025',s:'23:42'},{d:'08/08/2025',s:'00:52'},
+  {d:'11/08/2025',s:'01:50'},{d:'12/08/2025',s:'00:24'},{d:'13/08/2025',s:'00:25'},
+  {d:'14/08/2025',s:'07:05'},{d:'15/08/2025',s:'02:04'},{d:'18/08/2025',s:'00:04'},
+  {d:'19/08/2025',s:'00:04'},{d:'20/08/2025',s:'01:39'},{d:'21/08/2025',s:'00:52'},
+  {d:'22/08/2025',s:'02:01'},{d:'25/08/2025',s:'23:46'},{d:'26/08/2025',s:'23:49'},
+  {d:'27/08/2025',s:'00:10'},{d:'29/08/2025',s:'23:26'},
+  // SETEMBRO 2025
+  {d:'01/09/2025',s:'23:19'},{d:'02/09/2025',s:'22:23'},{d:'03/09/2025',s:'00:41'},
+  {d:'04/09/2025',s:'00:45'},{d:'05/09/2025',s:'01:44'},{d:'08/09/2025',s:'05:30'},
+  {d:'09/09/2025',s:'01:28'},{d:'10/09/2025',s:'00:55'},{d:'11/09/2025',s:'01:53'},
+  {d:'12/09/2025',s:'03:21'},{d:'15/09/2025',s:'01:28'},{d:'16/09/2025',s:'01:02'},
+  {d:'17/09/2025',s:'00:03'},{d:'18/09/2025',s:'00:43'},{d:'19/09/2025',s:'02:14'},
+  {d:'22/09/2025',s:'23:20'},{d:'23/09/2025',s:'02:05'},{d:'24/09/2025',s:'02:01'},
+  {d:'25/09/2025',s:'00:58'},{d:'26/09/2025',s:'00:38'},{d:'29/09/2025',s:'01:06'},
+  {d:'30/09/2025',s:'00:34'},
+  // OUTUBRO 2025
+  {d:'01/10/2025',s:'03:28'},{d:'02/10/2025',s:'01:01'},{d:'03/10/2025',s:'01:46'},
+  {d:'06/10/2025',s:'01:33'},{d:'07/10/2025',s:'01:14'},{d:'08/10/2025',s:'01:31'},
+  {d:'09/10/2025',s:'01:50'},{d:'10/10/2025',s:'23:24'},{d:'13/10/2025',s:'01:55'},
+  {d:'14/10/2025',s:'04:01'},{d:'15/10/2025',s:'01:22'},{d:'16/10/2025',s:'02:12'},
+  {d:'17/10/2025',s:'23:21'},{d:'20/10/2025',s:'05:20'},{d:'21/10/2025',s:'00:05'},
+  {d:'22/10/2025',s:'01:24'},{d:'23/10/2025',s:'00:30'},{d:'24/10/2025',s:'01:50'},
+  {d:'27/10/2025',s:'00:50'},{d:'28/10/2025',s:'23:40'},{d:'29/10/2025',s:'23:40'},
+  {d:'30/10/2025',s:'22:30'},{d:'31/10/2025',s:'02:00'},
+  // NOVEMBRO 2025
+  {d:'03/11/2025',s:'23:30'},{d:'04/11/2025',s:'00:34'},{d:'05/11/2025',s:'23:50'},
+  {d:'06/11/2025',s:'00:30'},{d:'07/11/2025',s:'00:50'},{d:'10/11/2025',s:'03:30'},
+  {d:'11/11/2025',s:'23:00'},{d:'12/11/2025',s:'22:07'},{d:'13/11/2025',s:'01:00'},
+  {d:'14/11/2025',s:'00:40'},{d:'17/11/2025',s:'21:10'},{d:'18/11/2025',s:'22:20'},
+  {d:'19/11/2025',s:'23:40'},{d:'21/11/2025',s:'23:18'},{d:'24/11/2025',s:'23:46'},
+  {d:'25/11/2025',s:'03:00'},{d:'26/11/2025',s:'00:24'},{d:'27/11/2025',s:'23:32'},
+  {d:'28/11/2025',s:'00:59'},{d:'30/11/2025',s:'19:12'},
+  // DEZEMBRO 2025
+  {d:'01/12/2025',s:'02:11'},{d:'02/12/2025',s:'01:30'},{d:'03/12/2025',s:'23:38'},
+  {d:'04/12/2025',s:'00:44'},{d:'05/12/2025',s:'22:18'},{d:'08/12/2025',s:'22:28'},
+  {d:'09/12/2025',s:'23:20'},{d:'10/12/2025',s:'23:20'},{d:'11/12/2025',s:'23:56'},
+  {d:'12/12/2025',s:'00:40'},{d:'15/12/2025',s:'01:08'},{d:'16/12/2025',s:'23:50'},
+  {d:'17/12/2025',s:'01:03'},{d:'18/12/2025',s:'23:32'},{d:'19/12/2025',s:'23:15'},
+  {d:'22/12/2025',s:'23:30'},{d:'23/12/2025',s:'22:45'},{d:'26/12/2025',s:'21:24'},
+  {d:'29/12/2025',s:'21:24'},
+  // JANEIRO 2026
+  {d:'02/01/2026',s:'22:20'},{d:'05/01/2026',s:'22:45'},{d:'06/01/2026',s:'21:00'},
+  {d:'07/01/2026',s:'22:30'},{d:'08/01/2026',s:'22:00'},{d:'09/01/2026',s:'22:00'},
+  {d:'12/01/2026',s:'01:22'},{d:'13/01/2026',s:'02:10'},{d:'14/01/2026',s:'23:56'},
+  {d:'15/01/2026',s:'01:16'},{d:'16/01/2026',s:'04:16'},{d:'19/01/2026',s:'04:12'},
+  {d:'20/01/2026',s:'01:40'},{d:'21/01/2026',s:'00:42'},{d:'22/01/2026',s:'01:45'},
+  {d:'23/01/2026',s:'00:01'},{d:'26/01/2026',s:'02:04'},{d:'27/01/2026',s:'23:14'},
+  {d:'28/01/2026',s:'23:52'},{d:'29/01/2026',s:'01:06'},{d:'30/01/2026',s:'23:24'},
+  // FEVEREIRO 2026
+  {d:'02/02/2026',s:'01:15'},{d:'03/02/2026',s:'01:35'},{d:'04/02/2026',s:'01:56'},
+  {d:'05/02/2026',s:'23:19'},{d:'06/02/2026',s:'00:15'},{d:'09/02/2026',s:'23:04'},
+  {d:'10/02/2026',s:'23:36'},{d:'11/02/2026',s:'23:41'},{d:'12/02/2026',s:'23:29'},
+  {d:'13/02/2026',s:'01:01'},{d:'18/02/2026',s:'21:49'},{d:'19/02/2026',s:'23:28'},
+  {d:'20/02/2026',s:'22:48'},{d:'23/02/2026',s:'22:44'},{d:'24/02/2026',s:'23:04'},
+  {d:'25/02/2026',s:'23:21'},{d:'27/02/2026',s:'23:59'},
+  // MARÇO 2026
+  {d:'02/03/2026',s:'23:42'},{d:'03/03/2026',s:'01:02'},{d:'04/03/2026',s:'01:39'},
+  {d:'05/03/2026',s:'22:32'},{d:'06/03/2026',s:'23:05'},{d:'09/03/2026',s:'23:08'},
+  {d:'10/03/2026',s:'00:39'},{d:'11/03/2026',s:'02:45'},{d:'12/03/2026',s:'23:31'},
+  {d:'13/03/2026',s:'23:51'},{d:'16/03/2026',s:'00:53'},{d:'17/03/2026',s:'00:30'},
+  {d:'18/03/2026',s:'21:36'},{d:'19/03/2026',s:'21:46'},{d:'20/03/2026',s:'22:17'},
+  {d:'23/03/2026',s:'01:00'},{d:'24/03/2026',s:'23:25'},{d:'25/03/2026',s:'00:15'},
+  {d:'26/03/2026',s:'23:22'},{d:'27/03/2026',s:'23:19'},{d:'30/03/2026',s:'22:33'},
+  {d:'31/03/2026',s:'23:25'},
+  // ABRIL 2026
+  {d:'01/04/2026',s:'00:10'},{d:'02/04/2026',s:'23:15'},{d:'06/04/2026',s:'23:05'},
+  {d:'07/04/2026',s:'23:20'},{d:'08/04/2026',s:'22:45'},{d:'09/04/2026',s:'22:00'},
+  {d:'10/04/2026',s:'23:00'},{d:'13/04/2026',s:'22:40'},{d:'14/04/2026',s:'23:00'},
+  {d:'15/04/2026',s:'22:47'},{d:'16/04/2026',s:'23:15'},{d:'17/04/2026',s:'00:00'},
+  {d:'20/04/2026',s:'23:20'},{d:'22/04/2026',s:'00:00'},{d:'23/04/2026',s:'01:00'},
+];
+
+const MONTH_NAMES = {
+  '2025-04':'Abr/25','2025-05':'Mai/25','2025-06':'Jun/25','2025-07':'Jul/25',
+  '2025-08':'Ago/25','2025-09':'Set/25','2025-10':'Out/25','2025-11':'Nov/25',
+  '2025-12':'Dez/25','2026-01':'Jan/26','2026-02':'Fev/26','2026-03':'Mar/26','2026-04':'Abr/26'
+};
+
+function toMins(hhmm) {
+  if (!hhmm || hhmm.trim() === '') return null;
+  const p = hhmm.trim().split(':');
+  if (p.length < 2) return null;
+  let h = parseInt(p[0]), m = parseInt(p[1]);
+  if (isNaN(h) || isNaN(m)) return null;
+  let total = h * 60 + m;
+  if (h < 12) total += 24 * 60; // após meia-noite = dia seguinte
+  return total;
+}
+
+function minsToHHMM(mins) {
+  const real = mins >= 24*60 ? mins - 24*60 : mins;
+  const h = Math.floor(real / 60), m = real % 60;
+  return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`;
+}
+
+function fmtDiff(mins) {
+  const abs = Math.abs(mins);
+  const h = Math.floor(abs / 60), m = abs % 60;
+  const sign = mins >= 0 ? '+' : '-';
+  return `${sign}${h}h${String(m).padStart(2,'0')}m`;
+}
+
+// Parse all data
+const DATA = RAW.map(r => {
+  const mins = toMins(r.s);
+  const diff = mins !== null ? mins - TARGET : null;
+  const [dd, mm, yyyy] = r.d.split('/');
+  const monthKey = `${yyyy}-${mm}`;
+  return { date: r.d, day: `${dd}/${mm}`, mins, diff, monthKey, monthName: MONTH_NAMES[monthKey] || monthKey };
+}).filter(r => r.mins !== null && r.diff !== null);
+
+// Group by month
+const months = [...new Set(DATA.map(r => r.monthKey))].sort();
+let activeMonth = months[months.length - 1];
+let chartInstance = null;
+
+// ===================== RENDER MONTH TABS =====================
+function renderTabs() {
+  const el = document.getElementById('monthTabs');
+  el.innerHTML = months.map(m =>
+    `<button class="tab ${m === activeMonth ? 'active' : ''}" onclick="selectMonth('${m}')">${MONTH_NAMES[m] || m}</button>`
+  ).join('');
+}
+
+// ===================== RENDER METRICS =====================
+function renderMetrics(data) {
+  const extras = data.filter(r => r.diff > 0);
+  const cedo = data.filter(r => r.diff <= 0);
+  const totalExtra = extras.reduce((s, r) => s + r.diff, 0);
+  const totalCedo = cedo.reduce((s, r) => s + r.diff, 0);
+  const net = totalExtra + totalCedo;
+  const avg = Math.round(data.reduce((s, r) => s + r.diff, 0) / data.length);
+
+  function fh(m) {
+    const a = Math.abs(m);
+    return `${Math.floor(a/60)}h${String(a%60).padStart(2,'0')}m`;
+  }
+
+  document.getElementById('metrics').innerHTML = `
+    <div class="metric-card">
+      <div class="label">Dias analisados</div>
+      <div class="value blue-val">${data.length}</div>
+    </div>
+    <div class="metric-card">
+      <div class="label">Dias com atraso</div>
+      <div class="value red-val">${extras.length}</div>
+      <div class="sub">${Math.round(extras.length/data.length*100)}% dos dias</div>
+    </div>
+    <div class="metric-card">
+      <div class="label">Dias adiantados</div>
+      <div class="value green-val">${cedo.length}</div>
+      <div class="sub">${Math.round(cedo.length/data.length*100)}% dos dias</div>
+    </div>
+    <div class="metric-card">
+      <div class="label">Total horas a +</div>
+      <div class="value red-val">+${fh(totalExtra)}</div>
+      <div class="sub">acima do target</div>
+    </div>
+    <div class="metric-card">
+      <div class="label">Total horas a −</div>
+      <div class="value green-val">−${fh(Math.abs(totalCedo))}</div>
+      <div class="sub">abaixo do target</div>
+    </div>
+    <div class="metric-card">
+      <div class="label">Saldo do mês</div>
+      <div class="value ${net >= 0 ? 'red-val' : 'green-val'}">${net >= 0 ? '+' : '−'}${fh(net)}</div>
+      <div class="sub">${net >= 0 ? 'atraso acumulado' : 'adiantado acumulado'}</div>
+    </div>
+    <div class="metric-card">
+      <div class="label">Média diária</div>
+      <div class="value ${avg >= 0 ? 'amber-val' : 'green-val'}">${avg >= 0 ? '+' : '−'}${fh(avg)}</div>
+      <div class="sub">vs target 23:08</div>
+    </div>
+  `;
+}
+
+// ===================== RENDER CHART =====================
+function renderChart(data) {
+  document.getElementById('chartTitle').textContent =
+    `Horário real de saída por dia — ${MONTH_NAMES[activeMonth] || activeMonth}`;
+
+  const H = Math.max(300, data.length * 34 + 80);
+  document.getElementById('chartWrap').style.height = H + 'px';
+
+  const labels = data.map(r => r.day);
+  const vals = data.map(r => r.mins);
+  const colors = data.map(r => r.diff > 0 ? 'rgba(163,45,45,0.85)' : 'rgba(15,110,86,0.75)');
+
+  if (chartInstance) chartInstance.destroy();
+
+  chartInstance = new Chart(document.getElementById('mainChart'), {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [{
+        data: vals,
+        backgroundColor: colors,
+        borderRadius: 3,
+        borderSkipped: false,
+      }]
+    },
+    options: {
+      indexAxis: 'y',
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            title: ctx => `Dia ${data[ctx[0].dataIndex].date}`,
+            label: ctx => {
+              const r = data[ctx.dataIndex];
+              return [`Saída: ${minsToHHMM(r.mins)}`, `Diferença: ${fmtDiff(r.diff)}`];
+            }
+          }
+        }
+      },
+      scales: {
+        x: {
+          min: 17 * 60,
+          max: 33 * 60,
+          ticks: {
+            callback: v => {
+              const real = v >= 24 * 60 ? v - 24 * 60 : v;
+              const h = Math.floor(real / 60), m = real % 60;
+              if (m !== 0) return '';
+              return `${String(h).padStart(2,'0')}:00`;
+            },
+            stepSize: 60,
+            color: '#9c9b96',
+            font: { size: 11 }
+          },
+          grid: { color: 'rgba(0,0,0,0.06)' }
+        },
+        y: {
+          ticks: { color: '#6b6a65', font: { size: 11 } },
+          grid: { display: false }
+        }
+      },
+      animation: { duration: 250 }
+    },
+    plugins: [
+      {
+        id: 'targetLine',
+        afterDraw(chart) {
+          const { ctx, scales: { x, y } } = chart;
+          const xPos = x.getPixelForValue(TARGET);
+          ctx.save();
+          ctx.beginPath();
+          ctx.setLineDash([6, 4]);
+          ctx.moveTo(xPos, y.top);
+          ctx.lineTo(xPos, y.bottom);
+          ctx.strokeStyle = '#EF9F27';
+          ctx.lineWidth = 2;
+          ctx.stroke();
+          ctx.setLineDash([]);
+          ctx.fillStyle = '#BA7517';
+          ctx.font = '600 11px Segoe UI, sans-serif';
+          ctx.textAlign = 'left';
+          ctx.fillText('23:08', xPos + 4, y.top + 14);
+          ctx.restore();
+        }
+      },
+      {
+        id: 'diffLabels',
+        afterDatasetsDraw(chart) {
+          const { ctx, scales: { x, y } } = chart;
+          chart.data.datasets[0].data.forEach((val, i) => {
+            const r = data[i];
+            const xPos = x.getPixelForValue(val);
+            const yPos = y.getPixelForValue(i);
+            const label = fmtDiff(r.diff);
+            const color = r.diff > 0 ? '#7B1E1E' : '#085041';
+            ctx.save();
+            ctx.fillStyle = color;
+            ctx.font = '500 10px Segoe UI, sans-serif';
+            ctx.textAlign = r.diff > 0 ? 'left' : 'right';
+            ctx.fillText(label, r.diff > 0 ? xPos + 4 : xPos - 4, yPos + 4);
+            ctx.restore();
+          });
+        }
+      }
+    ]
+  });
+}
+
+// ===================== RENDER SUMMARY TABLE =====================
+function renderSummaryTable() {
+  function fh(m) {
+    const a = Math.abs(m);
+    return `${Math.floor(a/60)}h${String(a%60).padStart(2,'0')}m`;
+  }
+
+  const rows = months.map(m => {
+    const data = DATA.filter(r => r.monthKey === m);
+    if (!data.length) return null;
+    const extras = data.filter(r => r.diff > 0);
+    const cedo = data.filter(r => r.diff <= 0);
+    const totalPlus = extras.reduce((s, r) => s + r.diff, 0);
+    const totalMinus = cedo.reduce((s, r) => s + r.diff, 0);
+    const net = totalPlus + totalMinus;
+    const avg = Math.round((totalPlus + totalMinus) / data.length);
+    return { m, data, extras, cedo, totalPlus, totalMinus, net, avg };
+  }).filter(Boolean);
+
+  document.getElementById('summaryBody').innerHTML = rows.map(r => `
+    <tr>
+      <td><strong>${MONTH_NAMES[r.m] || r.m}</strong></td>
+      <td>${r.data.length}</td>
+      <td><span class="badge badge-red">${r.extras.length} dias</span></td>
+      <td><span class="badge badge-green">${r.cedo.length} dias</span></td>
+      <td style="color:var(--red);font-weight:600">+${fh(r.totalPlus)}</td>
+      <td style="color:var(--green);font-weight:600">−${fh(Math.abs(r.totalMinus))}</td>
+      <td><span class="badge ${r.net >= 0 ? 'badge-red' : 'badge-green'}">${r.net >= 0 ? '+' : '−'}${fh(r.net)}</span></td>
+      <td style="color:${r.avg >= 0 ? 'var(--red)' : 'var(--green)'};font-weight:600">${r.avg >= 0 ? '+' : '−'}${fh(r.avg)}</td>
+    </tr>
+  `).join('');
+}
+
+// ===================== SELECT MONTH =====================
+function selectMonth(m) {
+  activeMonth = m;
+  renderTabs();
+  const data = DATA.filter(r => r.monthKey === m);
+  renderMetrics(data);
+  renderChart(data);
+}
+
+// ===================== INIT =====================
+renderTabs();
+selectMonth(activeMonth);
+renderSummaryTable();
+</script>
+</body>
+</html>
